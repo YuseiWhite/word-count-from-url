@@ -1,6 +1,8 @@
 import bs4
 from urllib.request import urlopen as uReq
 from bs4 import BeautifulSoup as soup
+import time
+from urllib.request import Request, urlopen
 
 def get_avg():
     for key, value in page_count_list.items():
@@ -19,17 +21,39 @@ def get_list():
 
 def process_url(the_url):
     print('\nProcessing webpage................')
-    fetched_url = uReq(the_url)
-    page_html = fetched_url.read()
-    fetched_url.close()
-    page_soup = soup(page_html, "html.parser")
-    seeing = page_soup.findAll('p')
-    the_text = str(seeing)
-    word_list = the_text.split()
-    word_count = len(word_list)
-    print('\n' + the_url[:50] + '... has ' + str(word_count) + ' words')
-    page_name = str(the_url[8:50])
-    page_count_list[page_name] = word_count
+    
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
+    
+    req = Request(the_url, headers=headers)
+    
+    max_retries = 2
+    retries = 0
+    
+    while retries < max_retries:
+        try:
+            fetched_url = urlopen(req)
+            page_html = fetched_url.read()
+            fetched_url.close()
+            
+            page_soup = soup(page_html, "html.parser")
+            seeing = page_soup.findAll('p')
+            the_text = str(seeing)
+            word_list = the_text.split()
+            word_count = len(word_list)
+            
+            print('\n' + the_url[:50] + '... has ' + str(word_count) + ' words')
+            page_name = str(the_url[8:50])
+            page_count_list[page_name] = word_count
+            
+            return  # 正常に完了したら関数を終了
+        except Exception as e:
+            retries += 1
+            print(f"Error accessing {the_url}. Retrying... ({retries}/{max_retries})")
+            time.sleep(5)  # エラーが発生した場合、再試行前に少し待機します
+
+    print(f"Failed to process {the_url} after {max_retries} attempts.")
 
 def store_results():
     question = '\nDo you want to save the results to a txt file? y or n: '
